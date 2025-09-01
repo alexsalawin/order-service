@@ -3,7 +3,7 @@
 High Level Diagram
 <img width="806" height="601" alt="AnyX_HighLevel drawio" src="https://github.com/user-attachments/assets/5d7b29ea-2519-48ad-b423-3b268cd9bbe2" />
 
-ervice Boundaries & Communication
+Service Boundaries & Communication
 
 Microservice decomposition:
 
