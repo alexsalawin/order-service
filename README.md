@@ -7,53 +7,53 @@
 
 Microservice decomposition:
 
-Order Service
+**Order Service**
 
-Responsibility: Receives orders, validates them, orchestrates allocation and fulfillment.
+**Responsibility**: Receives orders, validates them, orchestrates allocation and fulfillment.
 
-Boundaries: Does not manage inventory directly but coordinates with inventory-service.
+**Boundaries**: Does not manage inventory directly but coordinates with inventory-service.
 
-Communication:
+**Communication:**
 
-Synchronous: Calls inventory-service to check stock (REST/gRPC depending on latency requirements).
+**Synchronous:** Calls inventory-service to check stock (REST/gRPC depending on latency requirements).
 
-Asynchronous: Publishes order events (Kafka/message queue) to trigger fulfillment and notifications.
+**Asynchronous:** Publishes order events (Kafka/message queue) to trigger fulfillment and notifications.
 
-Inventory Service
+**Inventory Service**
 
-Responsibility: Manages stock levels (local DB and WMS integration), prevents overselling.
+**Responsibility:** Manages stock levels (local DB and WMS integration), prevents overselling.
 
-Boundaries: Only manages stock, no order or fulfillment logic.
+**Boundaries:** Only manages stock, no order or fulfillment logic.
 
-Communication:
+**Communication:**
 
-Synchronous: REST/gRPC for stock queries from order-service.
+**Synchronous:** REST/gRPC for stock queries from order-service.
 
-Asynchronous: Listens to order allocation events to decrement stock or trigger WMS checks.
+**Asynchronous:** Listens to order allocation events to decrement stock or trigger WMS checks.
 
-Fulfillment Service
+**Fulfillment Service**
 
-Responsibility: Sends orders to WMS for fulfillment.
+**Responsibility:** Sends orders to WMS for fulfillment.
 
-Boundaries: Independent from order creation; only handles actual fulfillment.
+**Boundaries:** Independent from order creation; only handles actual fulfillment.
 
-Communication:
+**Communication:**
 
-Synchronous: Call WMS API (REST) with retry/backoff.
+**Synchronous:** Call WMS API (REST) with retry/backoff.
 
-Asynchronous: Listens to order-allocated events to initiate fulfillment.
+**Asynchronous:** Listens to order-allocated events to initiate fulfillment.
 
-Channel Sync Service
+**Channel Sync Service**
 
-Responsibility: Syncs inventory/stock changes to Shopify or other sales channels.
+**Responsibility:** Syncs inventory/stock changes to Shopify or other sales channels.
 
-Boundaries: Independent from core order/fulfillment logic.
+**Boundaries:** Independent from core order/fulfillment logic.
 
-Communication:
+**Communication:**
 
-Asynchronous: Listens to stock updates (Kafka) and publishes updates to Shopify (REST API).
+**Asynchronous:** Listens to stock updates (Kafka) and publishes updates to Shopify (REST API).
 
-Justification:
+**Justification:**
 
 Each service has a single responsibility and owns its data.
 
@@ -63,16 +63,16 @@ Sync calls are used where immediate feedback is required (e.g., stock validation
 
 # Protocol choices:
 
-REST: For external integration (Shopify, WMS) due to wide support.
+**REST:** For external integration (Shopify, WMS) due to wide support.
 
-gRPC: Optional internal high-performance calls between microservices if low latency is critical. (Order service, Inventory service)
+**gRPC:** Optional internal high-performance calls between microservices if low latency is critical. (Order service, Inventory service)
 
-Message Queue (Kafka): For async events like stock updates, order allocation, fulfillment triggers. Keep order service as orchestration and decoupled from database and external service layers.
+**Message Queue (Kafka):** For async events like stock updates, order allocation, fulfillment triggers. Keep order service as orchestration and decoupled from database and external service layers.
 
 
 # API Design and Data Mapping
 
-Shopify Webhook DTO:
+**Shopify Webhook DTO:**
 
 data class ShopifyOrderWebhookDTO(
     val id: Long,
@@ -95,9 +95,9 @@ data class ShopifyLineItemDTO(
 
 # Fields chosen:
 
-Included: id, name, createdAt (order metadata), currency, financialStatus (payment validation), lineItems (to allocate stock), locationId (for WMS), totalPrice (optional validation).
+**Included:** id, name, createdAt (order metadata), currency, financialStatus (payment validation), lineItems (to allocate stock), locationId (for WMS), totalPrice (optional validation).
 
-Omitted: Customer personal info, shipping address (could be handled in fulfillment-service separately), Shopify-specific metadata not needed for stock/fulfillment.
+**Omitted:** Customer personal info, shipping address (could be handled in fulfillment-service separately), Shopify-specific metadata not needed for stock/fulfillment.
 
 # WMS Fulfillment API contract:
 
@@ -117,7 +117,7 @@ Overselling prevention strategy:
 
 Approach: Optimistic locking or atomic DB operations in inventory-service.
 
-Steps:
+**Steps:**
 
 Check available stock in DB.
 
@@ -125,19 +125,19 @@ Atomically decrement stock if sufficient quantity exists.
 
 Publish allocation event for fulfillment.
 
-Trade-offs:
+**Trade-offs:**
 
 Optimistic locking: Prevents overselling without locking entire table, but may require retries.
 
 Pessimistic locking: Ensures correctness but reduces throughput in high-concurrency scenarios.
 
-Additional safeguards:
+**Additional safeguards:**
 
 WMS stock can be checked asynchronously, but local DB remains the source of truth for order allocation.
 
 # Data Modeling
 
-PostgreSQL core tables:
+**PostgreSQL core tables:**
 
 CREATE TABLE inventory (
     sku VARCHAR PRIMARY KEY,
@@ -166,7 +166,7 @@ CREATE TABLE order_line_items (
 );
 
 
-Design choices:
+**Design choices:**
 
 inventory keyed by SKU for fast lookup and atomic updates.
 
@@ -178,9 +178,9 @@ Timestamps for tracking and auditing.
 
 # Error Handling & Resiliency
 
-Strategies:
+**Strategies:**
 
-WMS failures:
+**WMS failures:**
 
 Retry with exponential backoff (3 attempts, Thread.sleep backoff).
 
@@ -198,7 +198,7 @@ Retry via async event with idempotent updates (use SKU + order ID to prevent dup
 
 Alert system on repeated failures.
 
-Circuit Breakers:
+**Circuit Breakers:**
 
 Prevent cascading failures if WMS or Shopify API is down.
 
