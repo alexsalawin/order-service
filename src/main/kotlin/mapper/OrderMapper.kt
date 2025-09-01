@@ -1,24 +1,40 @@
 package org.ecommerce.mapper
 
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import org.ecommerce.dto.ShopifyOrderWebhookDTO
 import org.ecommerce.entity.OrderEntity
-import java.time.OffsetDateTime
-
-private val objectMapper = jacksonObjectMapper()
+import org.ecommerce.entity.OrderLineItemEntity
+import org.ecommerce.enum.OrderStatus
 
 fun ShopifyOrderWebhookDTO.toEntity(): OrderEntity {
-    val totalPriceDouble = totalPrice.toDoubleOrNull() ?: 0.0
+    // Convert Shopify's string totalPrice to Double safely
+    val parsedTotalPrice = totalPrice.toDoubleOrNull() ?: 0.0
 
-    return OrderEntity(
+    val order = OrderEntity(
         externalId = id.toString(),
         name = name,
-        customerEmail = null, // optional; add if you capture customer email elsewhere
-        totalPrice = totalPriceDouble,
-        currency = currency.ifBlank { "USD" },
-        lineItemsJson = objectMapper.writeValueAsString(lineItems),
-        status = "PENDING",
-        createdAt = createdAt.toOffsetDateTime(),
-        updatedAt = OffsetDateTime.now()
+        totalPrice = parsedTotalPrice,
+        currency = currency,
+        status = when (fulfillmentStatus?.lowercase()) {
+            "fulfilled" -> OrderStatus.COMPLETED
+            "cancelled" -> OrderStatus.CANCELLED
+            else -> OrderStatus.PENDING
+        },
+        createdAt = createdAt.toOffsetDateTime()
+    )
+
+    // Map line items and associate them back to the order
+    val mappedLineItems = lineItems.map { lineItemDto ->
+        OrderLineItemEntity(
+            sku = lineItemDto.sku ?: "UNKNOWN", // handle null SKU gracefully
+            quantity = lineItemDto.quantity,
+            price = 0.0, // Shopify webhook doesn’t give per-line price in your DTO
+            order = order
+        )
+    }
+
+    // Attach line items to order
+    return order.copy(
+        lineItems = mappedLineItems
     )
 }
+

@@ -13,10 +13,16 @@ message AllocateStockRequest {
   repeated LineItem line_items = 1; // All line items in the order
 }
 
+message StockAvailability {
+  string sku = 1;
+  int32 available_quantity = 2;
+}
+
 // Response from Inventory Service back to Order Service
 message AllocateStockResponse {
   bool success = 1;       // True if all items can be allocated
   string message = 2;     // Optional message for errors/failures
+  map<string, int32> availableQuantity = 3; // sku -> remaining quantity
 }
 
 // The Inventory gRPC Service definition

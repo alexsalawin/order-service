@@ -10,6 +10,7 @@ data class OrderLineItemEntity(
     val id: Long = 0,
     val sku: String,
     val quantity: Int,
+    val price: Double,
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "order_id")
     val order: OrderEntity

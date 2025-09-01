@@ -5,5 +5,6 @@ enum class OrderStatus(val value: String) {
     CONFIRMED("CONFIRMED"),
     ALLOCATED("ALLOCATED"),
     SHIPPED("SHIPPED"),
-    CANCELLED("CANCELLED")
+    CANCELLED("CANCELLED"),
+    COMPLETED("COMPLETED")
 }

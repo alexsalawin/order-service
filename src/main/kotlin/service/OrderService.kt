@@ -4,18 +4,22 @@ import inventory.Inventory.AllocateStockResponse
 import org.ecommerce.dto.ShopifyOrderWebhookDTO
 import org.ecommerce.entity.OrderEntity
 import org.ecommerce.enum.OrderStatus
+import org.ecommerce.event.InventoryUpdatedEvent
 import org.ecommerce.exception.OrderProcessingException
 import org.ecommerce.mapper.toEntity
 import org.ecommerce.repository.OrderRepository
 import org.ecommerce.grpc.InventoryGrpcClient
 import org.slf4j.LoggerFactory
+import org.springframework.kafka.core.KafkaTemplate
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
 @Service
 class OrderService(
     private val orderRepository: OrderRepository,
-    private val inventoryGrpcClient: InventoryGrpcClient
+    private val inventoryGrpcClient: InventoryGrpcClient,
+    private val kafkaTemplate: KafkaTemplate<String, InventoryUpdatedEvent>
+
 ) {
     private val logger = LoggerFactory.getLogger(OrderService::class.java)
 
@@ -33,8 +37,7 @@ class OrderService(
 
         try {
             // --- gRPC call to InventoryService ---
-            val inventoryResponse: AllocateStockResponse =
-                inventoryGrpcClient.allocateStock(request.lineItems)
+            val inventoryResponse: AllocateStockResponse = inventoryGrpcClient.allocateStock(request.lineItems)
 
             if (!inventoryResponse.success) {
                 orderEntity.status = OrderStatus.CANCELLED
@@ -46,8 +49,18 @@ class OrderService(
             orderEntity.status = OrderStatus.ALLOCATED
             orderRepository.save(orderEntity)
 
-            // TODO: emit async events for channel inventory sync + WMS fulfillment
-            logger.info("Order ${request.id} saved and inventory allocated successfully")
+            // --- publish inventory update event ---
+            orderEntity.lineItems.forEach { item ->
+                val event = InventoryUpdatedEvent(
+                    orderId = orderEntity.externalId,
+                    sku = item.sku,
+                    availableQuantity = inventoryResponse.availableQuantityMap[item.sku] ?: 0,
+                    locationId = request.locationId
+                )
+                kafkaTemplate.send("inventory-updates", event)
+                logger.info("Published inventory update event for SKU ${item.sku}")
+            }
+
         } catch (e: Exception) {
             logger.error("Error processing order ${request.id}", e)
             throw OrderProcessingException("Failed to process Shopify order ${request.id}", e)
