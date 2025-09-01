@@ -19,6 +19,8 @@ Microservice decomposition:
 
 **Asynchronous:** Publishes order events (Kafka/message queue) to trigger fulfillment and notifications.
 
+
+
 **Inventory Service**
 
 **Responsibility:** Manages stock levels (local DB and WMS integration), prevents overselling.
@@ -30,6 +32,8 @@ Microservice decomposition:
 **Synchronous:** REST/gRPC for stock queries from order-service.
 
 **Asynchronous:** Listens to order allocation events to decrement stock or trigger WMS checks.
+
+
 
 **Fulfillment Service**
 
@@ -43,6 +47,8 @@ Microservice decomposition:
 
 **Asynchronous:** Listens to order-allocated events to initiate fulfillment.
 
+
+
 **Channel Sync Service**
 
 **Responsibility:** Syncs inventory/stock changes to Shopify or other sales channels.
@@ -52,6 +58,8 @@ Microservice decomposition:
 **Communication:**
 
 **Asynchronous:** Listens to stock updates (Kafka) and publishes updates to Shopify (REST API).
+
+
 
 **Justification:**
 
