@@ -45,6 +45,7 @@ dependencies {
     implementation("io.grpc:grpc-netty-shaded:1.59.0")
     implementation("io.grpc:grpc-protobuf:1.59.0")
     implementation("io.grpc:grpc-stub:1.59.0")
+    compileOnly("javax.annotation:javax.annotation-api:1.3.2")
 
     // --- Testing ---
     testImplementation("org.springframework.boot:spring-boot-starter-test") {

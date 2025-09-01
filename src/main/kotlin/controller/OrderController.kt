@@ -1,10 +1,10 @@
-package org.ecommerce.controllers
+package org.ecommerce.controller
 
 import jakarta.validation.Valid
 import org.ecommerce.dto.ShopifyOrderWebhookDTO
+import org.ecommerce.exception.OrderProcessingException
 import org.ecommerce.service.OrderService
 import org.slf4j.LoggerFactory
-import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 
@@ -32,10 +32,9 @@ class OrderController(
         return try {
             orderService.processShopifyOrder(request, webhookId)
             ResponseEntity.ok("Webhook processed successfully")
-        } catch (e: Exception) {
-            logger.error("Failed to process Shopify webhook: ${e.message}", e)
-            ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body("Failed to process webhook")
+        } catch (ex: OrderProcessingException) {
+            logger.error("Failed to process Shopify order: ${request.id}", ex)
+            throw ex
         }
     }
 }
