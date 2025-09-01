@@ -1,41 +1,62 @@
 package org.ecommerce.service
 
+import inventory.Inventory.AllocateStockResponse
 import org.ecommerce.dto.ShopifyOrderWebhookDTO
+import org.ecommerce.entity.OrderEntity
+import org.ecommerce.enum.OrderStatus
+import org.ecommerce.exception.OrderProcessingException
+import org.ecommerce.mapper.toEntity
+import org.ecommerce.repository.OrderRepository
+import org.ecommerce.grpc.InventoryGrpcClient
 import org.slf4j.LoggerFactory
+import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
-class OrderService {
-
+@Service
+class OrderService(
+    private val orderRepository: OrderRepository,
+    private val inventoryGrpcClient: InventoryGrpcClient
+) {
     private val logger = LoggerFactory.getLogger(OrderService::class.java)
 
-    /**
-     * Process Shopify order webhook
-     * - Idempotency check
-     * - Validate stock (later with WMS)
-     * - Persist order
-     * - Emit async event for inventory sync
-     */
     @Transactional
     fun processShopifyOrder(request: ShopifyOrderWebhookDTO, webhookId: String?) {
         logger.info("Processing Shopify order id=${request.id}, webhookId=$webhookId")
 
-        // Idempotency: ensure order not already processed
         if (orderRepository.existsByExternalId(request.id.toString())) {
             logger.warn("Order ${request.id} already processed, skipping.")
             return
         }
 
+        validateOrder(request)
+        val orderEntity: OrderEntity = request.toEntity()
+
         try {
-            // Map DTO → Entity
-            val orderEntity = request.toEntity()
+            // --- gRPC call to InventoryService ---
+            val inventoryResponse: AllocateStockResponse =
+                inventoryGrpcClient.allocateStock(request.lineItems)
+
+            if (!inventoryResponse.success) {
+                orderEntity.status = OrderStatus.CANCELLED
+                orderRepository.save(orderEntity)
+                logger.warn("Order ${request.id} cannot be allocated: ${inventoryResponse.message}")
+                return
+            }
+
+            orderEntity.status = OrderStatus.ALLOCATED
             orderRepository.save(orderEntity)
 
-            // TODO: publish async event for inventory sync + WMS fulfillment
-
-            logger.info("Order ${request.id} saved successfully")
+            // TODO: emit async events for channel inventory sync + WMS fulfillment
+            logger.info("Order ${request.id} saved and inventory allocated successfully")
         } catch (e: Exception) {
-            logger.error("Error saving order ${request.id}", e)
+            logger.error("Error processing order ${request.id}", e)
             throw OrderProcessingException("Failed to process Shopify order ${request.id}", e)
         }
+    }
+
+    private fun validateOrder(request: ShopifyOrderWebhookDTO) {
+        require(request.lineItems.isNotEmpty()) { "Order must have at least one line item" }
+        require(request.totalPrice.toDoubleOrNull() != null) { "total_price must be a valid number" }
+        require(request.currency.isNotBlank()) { "currency cannot be blank" }
     }
 }

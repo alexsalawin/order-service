@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+package inventory;
+
+// Represents a single product in an order
+message LineItem {
+  string sku = 1;        // SKU of the product
+  int32 quantity = 2;     // Quantity ordered
+}
+
+// Request from Order Service to check/allocate stock
+message AllocateStockRequest {
+  repeated LineItem line_items = 1; // All line items in the order
+}
+
+// Response from Inventory Service back to Order Service
+message AllocateStockResponse {
+  bool success = 1;       // True if all items can be allocated
+  string message = 2;     // Optional message for errors/failures
+}
+
+// The Inventory gRPC Service definition
+service InventoryService {
+  // Allocate stock for a list of items
+  rpc AllocateStock (AllocateStockRequest) returns (AllocateStockResponse);
+}
