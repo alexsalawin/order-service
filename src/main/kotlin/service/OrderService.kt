@@ -5,6 +5,8 @@ import org.ecommerce.dto.ShopifyOrderWebhookDTO
 import org.ecommerce.entity.OrderEntity
 import org.ecommerce.enum.OrderStatus
 import org.ecommerce.event.InventoryUpdatedEvent
+import org.ecommerce.event.OrderAllocatedEvent
+import org.ecommerce.event.OrderLineItemDto
 import org.ecommerce.exception.OrderProcessingException
 import org.ecommerce.mapper.toEntity
 import org.ecommerce.repository.OrderRepository
@@ -18,7 +20,7 @@ import org.springframework.transaction.annotation.Transactional
 class OrderService(
     private val orderRepository: OrderRepository,
     private val inventoryGrpcClient: InventoryGrpcClient,
-    private val kafkaTemplate: KafkaTemplate<String, InventoryUpdatedEvent>
+    private val kafkaTemplate: KafkaTemplate<String, Any>
 
 ) {
     private val logger = LoggerFactory.getLogger(OrderService::class.java)
@@ -60,6 +62,22 @@ class OrderService(
                 kafkaTemplate.send("inventory-updates", event)
                 logger.info("Published inventory update event for SKU ${item.sku}")
             }
+
+            // --- publish order allocated event for fulfillment ---
+            val allocatedEvent = OrderAllocatedEvent(
+                orderId = orderEntity.externalId,
+                lineItems = orderEntity.lineItems.map { item ->
+                OrderLineItemDto(
+                    sku = item.sku,
+                    quantity = item.quantity
+                )
+            },
+            locationId = request.locationId
+            )
+
+            kafkaTemplate.send("orders-allocated", allocatedEvent)
+            logger.info("Published OrderAllocatedEvent for order ${orderEntity.externalId}")
+
 
         } catch (e: Exception) {
             logger.error("Error processing order ${request.id}", e)
