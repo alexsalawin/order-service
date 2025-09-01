@@ -1,9 +1,9 @@
 # order-service
 
-High Level Diagram
+# High Level Diagram
 <img width="806" height="601" alt="AnyX_HighLevel drawio" src="https://github.com/user-attachments/assets/5d7b29ea-2519-48ad-b423-3b268cd9bbe2" />
 
-Service Boundaries & Communication
+# Service Boundaries & Communication
 
 Microservice decomposition:
 
@@ -61,7 +61,7 @@ Async events decouple services and improve resiliency.
 
 Sync calls are used where immediate feedback is required (e.g., stock validation before order confirmation).
 
-Protocol choices:
+# Protocol choices:
 
 REST: For external integration (Shopify, WMS) due to wide support.
 
@@ -70,7 +70,7 @@ gRPC: Optional internal high-performance calls between microservices if low late
 Message Queue (Kafka): For async events like stock updates, order allocation, fulfillment triggers. Keep order service as orchestration and decoupled from database and external service layers.
 
 
-b. API Design and Data Mapping
+# API Design and Data Mapping
 
 Shopify Webhook DTO:
 
@@ -93,13 +93,13 @@ data class ShopifyLineItemDTO(
 )
 
 
-Fields chosen:
+# Fields chosen:
 
 Included: id, name, createdAt (order metadata), currency, financialStatus (payment validation), lineItems (to allocate stock), locationId (for WMS), totalPrice (optional validation).
 
 Omitted: Customer personal info, shipping address (could be handled in fulfillment-service separately), Shopify-specific metadata not needed for stock/fulfillment.
 
-WMS Fulfillment API contract:
+# WMS Fulfillment API contract:
 
 data class FulfillmentRequest(
     val orderId: String,
@@ -111,7 +111,7 @@ data class FulfillmentLineItemDto(
     val quantity: Int
 )
 
-c. Data Consistency & Race Conditions
+# Data Consistency & Race Conditions
 
 Overselling prevention strategy:
 
@@ -135,7 +135,7 @@ Additional safeguards:
 
 WMS stock can be checked asynchronously, but local DB remains the source of truth for order allocation.
 
-d. Data Modeling
+# Data Modeling
 
 PostgreSQL core tables:
 
@@ -176,7 +176,7 @@ Foreign key ensures order-line integrity.
 
 Timestamps for tracking and auditing.
 
-e. Error Handling & Resiliency
+# Error Handling & Resiliency
 
 Strategies:
 
