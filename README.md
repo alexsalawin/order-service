@@ -7,7 +7,7 @@
 
 Microservice decomposition:
 
-###Order Service
+### Order Service
 
 **Responsibility**: Receives orders, validates them, orchestrates allocation and fulfillment.
 
@@ -21,7 +21,7 @@ Microservice decomposition:
 
 
 
-###Inventory Service
+### Inventory Service
 
 **Responsibility:** Manages stock levels (local DB and WMS integration), prevents overselling.
 
@@ -35,7 +35,7 @@ Microservice decomposition:
 
 
 
-###Fulfillment Service
+### Fulfillment Service
 
 **Responsibility:** Sends orders to WMS for fulfillment.
 
@@ -49,7 +49,7 @@ Microservice decomposition:
 
 
 
-###Channel Sync Service
+### Channel Sync Service
 
 **Responsibility:** Syncs inventory/stock changes to Shopify or other sales channels.
 
